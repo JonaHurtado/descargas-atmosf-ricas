@@ -1,0 +1,71 @@
+/* Global Theme Overrides - Dark Mode Enhanced */
+:root {
+    --primary-color: #0068c9;
+    --background-color: #0e1117;
+    --text-color: #fafafa;
+}
+
+/* Titles */
+h1 {
+    color: #e0e0e0;
+    font-weight: 700;
+}
+
+h2 {
+    color: #4da6ff;
+    border-bottom: 2px solid #4da6ff;
+    padding-bottom: 0.5rem;
+    margin-top: 2rem;
+}
+
+h3 {
+    color: #b0b0b0;
+    margin-top: 1.5rem;
+}
+
+/* Metrics */
+[data-testid="stMetricValue"] {
+    font-size: 2rem !important;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+[data-testid="stMetricLabel"] {
+    color: #b0b0b0;
+}
+
+/* Inputs */
+.stTextInput>div>div>input,
+.stNumberInput>div>div>input,
+.stSelectbox>div>div>div {
+    background-color: #262730;
+    color: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #404040;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background-color: #1a1c24;
+    border-right: 1px solid #303030;
+}
+
+/* Tabs */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 10px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    white-space: pre-wrap;
+    background-color: #262730;
+    border-radius: 4px 4px 0px 0px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    color: #b0b0b0;
+}
+
+.stTabs [aria-selected="true"] {
+    background-color: #0068c9;
+    color: white;
+}
