@@ -1,0 +1,129 @@
+Quiero que me modifique el código para que haga lo siguiente:
+
+Por cada zona hay que calcular 4 riesgos:
+R1, R2, R3 y R4.
+
+Esta vez solo nos centraremos en R4:
+R4=Ra4*+Rb4+Rc4+Rm4+Ru4*+Rv4+Rw4+Rz4
+*Solo para propiedades donde puede producirse pérdida de animales.
+
+Por defecto los sumandos marcados como * serán cero si el usuario no marca las casillas confirmando esas suposiciones en R4. Recuerda que estas condiciones para R1 y R2 no se tiene en cuenta.
+
+Es decir, para cada zona habrá 3 pestañas (R1, R2 y R4) y dentro de cada pestaña aparecerá las componentes que son necesarios para definir estos riesgos. No se debe modificar las pestañas R1 y R2. 
+
+En el caso de R4 se deberá calcular las siguientes componentes:
+
+1. Ra=Nd·Pa·La4
+1.1. Nd=Ng·Ad·Cd
+1.1.1. Ng=Definir el usuario (Por defecto 1)
+1.1.2. Ad=Usar la ecuación A.2 o que lo defina el usuario directamente
+1.1.3. Cd=Valores de la Tabla A.1 (Por defecto --> Estructura aislada: sin otros objetos en las proximidades)
+1.2. Pa=Pta·Pb
+1.2.1. Pta=Valores de la Tabla B.1 (Por defecto --> Aislamiento eléctrico)
+1.2.2. Pb=Valores de la Tabla B.2 (Por defecto --> Estructura no protegida por un SPCR)
+1.3. La4=Ecuación C.10
+1.3.1. rt=Tabla C.3 (Por defecto --> Agrícola, hormigón)
+1.3.2. Lt=Tabla C.12 (Por defecto --> 10^-2)
+1.3.3. ca=Es el valor de los animales en la zona a definir por el usuario (Por defecto --> 0)
+1.3.4. ct=Es el valor total de la estructura (Por defecto --> 500)
+
+2. Rb=Nd·Pb·Lb4
+2.1. Nd= El mismo valor que el 1.1.
+2.2. Pb= El mismo valor que el 1.2.
+2.3. Lb4 = Ecuación C.12.
+2.3.1. rp=Tabla C.4 (Por defecto --> Una de las siguientes medidas: extintores; instalaciones fijas de extinción manuales; instalaciones manuales de alarma; tomas de agua; compartimentos a prueba de fuego; vías de evacuación)
+2.3.2. rf=Tabla C.5 (Por defecto --> Fuego Normal)
+2.3.3. Lf4=Tabla C.12 (Por defecto --> Industrial, comercios)
+2.3.4. ca=Es el valor de los animales en la zona a definir por el usuario (Por defecto --> 0)
+2.3.5. cb=Es el valor del edificio relevante de la zona (Por defecto --> 350)
+2.3.6. cc=Es el valor del contenido en la zona (Por defecto --> 50)
+2.3.7. cs=Es el valor de los sistemas internos incluidas sus actividades de la zona (Por defecto --> 75)
+2.3.8. ct=Es el valor total de la estructura (Por defecto --> 500)
+
+3. Rc=Nd·Pc·Lc4
+3.1. Nd=El mismo valor que el 1.1.
+3.2. Pc=Pspd·Cld
+3.2.1. Pspd=Tabla B.3 (Por defecto --> 	Nivel de protección II)
+3.2.2. Cld=Tabla B.4. (Por defecto --> Línea enterrada sin apantallar)
+3.3. Lc4=Ecuación C.13
+3.3.1. Lo4=Tabla C.2 (Por defecto --> Hospital/Industrial/Oficinas)
+3.3.2. cs=Es el valor de los sistemas internos incluidas sus actividades de la zona (Por defecto --> 75)
+3.3.3. ct=Es el valor total de la estructura (Por defecto --> 500)
+
+4. Rm=Nm·Pm·Lm4
+4.1. Nm=Ng·Am (Ecuación A.6)
+4.1.1. Ng
+4.1.2. Am= Ecuación A.7 o que lo defina el usuario directamente
+4.2. Pm=Pspd·Pms
+4.2.1. Pspd=Tabla B.3 (Por defecto --> 	Nivel de protección II)
+4.2.2.Pms=Ks1^2·Ks2^2·Ks3^2·Ks4^2
+4.2.2.1. Ks1=Ecuación B.5 (El valor máximo de KS1 y KS2 está limitado a 1)
+4.2.2.1.1.wm1 (m) (Por defecto --> 2 metros)
+4.2.2.2. Ks2=Ecuación B.6 (El valor máximo de KS1 y KS2 está limitado a 1)
+4.2.2.2.1. wm2 (m) (Por defecto --> 2 metros)
+4.2.2.3. Ks3=Tabla B.5 (Por defecto --> Cable sin apantallar − precauciones de cableado para evitar grandes bucles)
+4.2.2.4. Ks4= Ecuación B.7 (El valor máximo de KS4 está limitado a 1)
+4.2.2.4.1. Uw es la tensión nominal soportada a impulso (kV), del sistema a proteger (Por defecto --> 1 kV)
+4.3. Lm4=Lc4
+
+5. Ru=(Nl+Ndj)·Pu·Lu4
+5.1. Nl=Ng·Al·Ci·Ce·Ct·10^-6
+5.1.1. Ng
+5.1.2. Al=40·Ll
+5.1.2.1. Ll=Longitud de la linea (sino se conoce se puede asumir 1000 m)
+5.1.3. Ci=Tabla A.2 (Por defecto --> Enterrada)
+5.1.4. Ce=Tabla A.4 (Por defecto --> Rural)
+5.1.5. Ct=Tabla A.3 (Por defecto --> Línea de potencia de AT (con transformador AT/BT))
+5.2. Ndj=Ng·Adj·Cdj·Ct·10^-6
+5.2.1. Ng
+5.2.2. Adj=Usar la ecuación A.2 con Lj, Wj, Hj o que lo defina el usuario directamente
+5.2.2.1. Lj=Definir por el usuario (Por defecto --> 0 metros)
+5.2.2.2. Wj=Definir por el usuario (Por defecto --> 0 metros)
+5.2.2.3. Hj=Definir por el usuario (Por defecto --> 0 metros)
+5.2.3. Cdj=Tabla A.1 (Por defecto --> Estructura aislada: sin otros objetos en las proximidades)
+5.2.4. Ct=Tabla A.3
+5.3. Pu=Ecuación B.8
+5.3.1. Ptu=Tabla B.6 (Por defecto --> Aislamiento eléctrico)
+5.3.2. Peb=Tabla B.7 (Por defecto --> NPR II)
+5.3.3. Pld=Tabla B.8 (Por defecto --> Línea aérea o enterrada, sin apantallar o apantallada con
+la pantalla sin conectar a la barra equipotencial del equipamiento)
+5.3.4. Cld=Tabla B.4 
+5.4. Lu4=La4
+
+6. Rv=(Nl+Njd)·Pv·Lv4
+6.1. Nl
+6.2. Njd
+6.3. Pv=Peb·Pld·Cld (Ecuación B.9)
+6.3.1. Peb=Tabla B.7
+6.3.2. Pld=Tabla B.8
+6.3.3. Cld=Tabla B.4
+6.4. Lv4=Lb4
+
+7. Rw=(Nl+Njd)·Pw·Lw4
+7.1. Nl
+7.2. Njd
+7.3. Pw=Pspd·Pld·Cld
+7.3.1. Pspd
+7.3.2. Pld
+7.3.3. Cld
+7.4. Lw4=Lc4
+
+8. Rz=Ni·Pz·Lz4
+8.1. Ni=Ng·Ai·Ci·Ce·Ct·10^-6
+8.1.1. Ng
+8.1.2. Ai= 100·Ll (Siendo Ll=1000 por defecto)
+8.1.3. Ci=Tabla A.2 (Por defecto --> Enterrada)
+8.1.4. Ce=Tabla A.4 (Por defecto --> Rural)
+8.1.5. Ct=Tabla A.3 (Por defecto --> Línea de potencia de AT (con transformador AT/BT))
+8.2. Pz=Pspd·Pli·Cli
+8.2.1. Pspd
+8.2.2. Pli=Tabla B.9 (Por defecto --> 1)
+8.2.3. Cli=Tabla B.4 (Por defecto --> Línea enterrada sin apantallar)
+8.3. Lz4=Lc4
+
+Ahora para el cálculo de R4=Ra4*+Rb4+Rc4+Rm4+Ru4*+Rv4+Rw4+Rz4 si los parámetros son los mismos que en R1, con que el usuario lo haya definido ahí es suficiente. No hace falta volver a definirlo en R4 para que no quede tan cargada la interfaz de variables.
+Es importante que cuando se calcule los riesgos se haga de R1, R2 y R4.
+
+Además ten en cuenta que quiero verlo en streamlit.
+
+Por último quiero remarcar que todos los parámetros que se definan en Tablas debe ser definido por el usuario con las posibilidades que ofrece la IEC 62305-2.

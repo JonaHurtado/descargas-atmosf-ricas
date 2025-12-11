@@ -1,0 +1,84 @@
+Quiero que me modifique el código para que haga lo siguiente sin modificar R1:
+
+Por cada zona hay que calcular 4 riesgos:
+R1, R2, R3 y R4.
+
+Esta vez solo nos centraremos en R2:
+R2=Rb2+Rc2+Rm2+Rv2+Rw2+Rz2
+
+Es decir, para cada zona habrá 2 pestañas (R1 y R2) y dentro de cada pestaña aparecerá las componentes que son necesarios para definir estos riesgos. 
+
+En el caso de R2 se deberá calcular las siguientes componentes:
+
+1. Rb=Nd·Pb·Lb1
+1.1. Nd= El mismo valor que el 1.1.
+1.2. Pb= El mismo valor que el 1.2.
+1.3. Lb2 = Ecuación Ecuación C.7.
+1.3.1. rp=Tabla C.4 (Por defecto --> Una de las siguientes medidas: extintores; instalaciones fijas de extinción manuales; instalaciones manuales de alarma; tomas de agua; compartimentos a prueba de fuego; vías de evacuación)
+1.3.2. rf=Tabla C.5 (Por defecto --> Fuego Normal)
+1.3.3. Lf2=Tabla C.8 (Por defecto --> Gas, agua, electricidad [10^-1])
+1.3.4. nz=Valor a definir por el usuario (1 por defecto)
+1.3.5. nt=Valor a definir por el usuario (1 por defecto)
+
+2. Rc=Nd·Pc·Lc2
+2.1. Nd=El mismo valor que el 1.1.
+2.2. Pc=Pspd·Cld
+2.2.1. Pspd=Tabla B.3 (Por defecto --> 	Nivel de protección II)
+2.2.2. Cld=Tabla B.4. (Por defecto --> Línea enterrada sin apantallar)
+2.3. Lc2=Ecuación C.8
+2.3.1. Lo2=Tabla C.8 (Por defecto --> Gas, agua, electricidad [10^-2])
+2.3.2. nz=Valor a definir por el usuario (1 por defecto)
+2.3.3. nt=Valor a definir por el usuario (1 por defecto)
+
+3. Rm=Nm·Pm·Lm2
+3.1. Nm=Ng·Am (Ecuación A.6)
+3.1.1. Ng
+3.1.2. Am= Ecuación A.7 o que lo defina el usuario directamente
+3.2. Pm=Pspd·Pms
+3.2.1. Pspd=Tabla B.3 (Por defecto --> 	Nivel de protección II)
+3.2.2.Pms=Ks1^2·Ks2^2·Ks3^2·Ks4^2
+3.2.2.1. Ks1=Ecuación B.5 (El valor máximo de KS1 y KS2 está limitado a 1)
+3.2.2.1.1.wm1 (m) (Por defecto --> 2 metros)
+3.2.2.2. Ks2=Ecuación B.6 (El valor máximo de KS1 y KS2 está limitado a 1)
+3.2.2.2.1. wm2 (m) (Por defecto --> 2 metros)
+3.2.2.3. Ks3=Tabla B.5 (Por defecto --> Cable sin apantallar − precauciones de cableado para evitar grandes bucles)
+3.2.2.4. Ks4= Ecuación B.7 (El valor máximo de KS4 está limitado a 1)
+3.2.2.4.1. Uw es la tensión nominal soportada a impulso (kV), del sistema a proteger (Por defecto --> 1 kV)
+3.3. Lm2=Lc2
+
+4. Rv=(Nl+Njd)·Pv·Lv2
+4.1. Nl
+4.2. Njd
+4.3. Pv=Peb·Pld·Cld (Ecuación B.9)
+4.3.1. Peb=Tabla B.7
+4.3.2. Pld=Tabla B.8
+4.3.3. Cld=Tabla B.4
+4.4. Lv2=Lb2
+
+5. Rw=(Nl+Njd)·Pw·Lw2
+5.1. Nl
+5.2. Njd
+5.3. Pw=Pspd·Pld·Cld
+5.3.1. Pspd
+5.3.2. Pld
+5.3.3. Cld
+5.4. Lw2=Lc2
+
+6. Rz=Ni·Pz·Lz2
+6.1. Ni=Ng·Ai·Ci·Ce·Ct·10^-6
+6.1.1. Ng
+6.1.2. Ai= 100·Ll (Siendo Ll=1000 por defecto)
+6.1.3. Ci=Tabla A.2 (Por defecto --> Enterrada)
+6.1.4. Ce=Tabla A.4 (Por defecto --> Rural)
+6.1.5. Ct=Tabla A.3 (Por defecto --> Línea de potencia de AT (con transformador AT/BT))
+6.2. Pz=Pspd·Pli·Cli
+6.2.1. Pspd
+6.2.2. Pli=Tabla B.9 (Por defecto --> 1)
+6.2.3. Cli=Tabla B.4 (Por defecto --> Línea enterrada sin apantallar)
+6.3. Lz2=Lc2
+
+Ahora para el cálculo de R2=Rb2+Rc2+Rm2+Rv2+Rw2+Rz2 si los parámetros son los mismos que en R1, con que el usuario lo haya definido ahí es suficiente. No hace falta volver a definirlo en R2 para que no quede tan cargada la interfaz de variables
+
+Además ten en cuenta que quiero verlo en streamlit.
+
+Por último quiero remarcar que todos los parámetros que se definan en Tablas debe ser definido por el usuario con las posibilidades que ofrece la IEC 62305-2.
