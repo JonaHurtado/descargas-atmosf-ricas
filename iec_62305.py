@@ -1,6 +1,9 @@
 """
-IEC 62305-2 Risk Calculation Engine - R1 Focus
-Implements R1 = Ra1 + Rb1 + Rc1* + Rm1* + Ru1 + Rv1 + Rw1* + Rz1*
+IEC 62305-2 Risk Calculation Engine - R1 and R2
+Implements:
+  R1 = Ra1 + Rb1 + Rc1* + Rm1* + Ru1 + Rv1 + Rw1* + Rz1*
+  R2 = Rb2 + Rc2 + Rm2 + Rv2 + Rw2 + Rz2
+  R4 = Ra4* + Rb4 + Rc4 + Rm4 + Ru4* + Rv4 + Rw4 + Rz4
 """
 import math
 from dataclasses import dataclass
@@ -118,6 +121,57 @@ class ZoneParameters:
     pli: float = 1.0  # Table B.9 - default: 1
     cli: float = 1.0  # Table B.4 - default: "Línea enterrada sin apantallar"
     # Lz1 = Lc1 (reused)
+    
+    # ========================================
+    # === R2 RISK PARAMETERS (Service Loss) ===
+    # ========================================
+    # R2 = Rb2 + Rc2 + Rm2 + Rv2 + Rw2 + Rz2
+    # Most parameters are reused from R1 (Nd, Pb, Pc, Pm, Pspd, etc.)
+    # Only loss factors Lf2 and Lo2 are specific to R2
+    
+    # Lb2 = rp × rf × Lf2 × (nz/nt) (Equation C.7)
+    lf2: float = 1e-1  # Table C.8 - default: "Gas, agua, electricidad"
+    
+    # Lc2 = Lo2 × (nz/nt) (Equation C.8)
+    lo2: float = 1e-2  # Table C.8 - default: "Gas, agua, electricidad"
+    
+    # Optional: Allow different nz/nt for R2 (default: reuse from R1)
+    nz_r2: Optional[float] = None  # If None, reuse nz from R1
+    nt_r2: Optional[float] = None  # If None, reuse nt from R1
+    
+    # Optional: Rm parameters for R2 if not defined in R1 (when not explosion/hospital)
+    wm1_r2: Optional[float] = None  # If None, reuse wm1 from R1
+    wm2_r2: Optional[float] = None  # If None, reuse wm2 from R1
+    ks3_r2: Optional[float] = None  # If None, reuse ks3 from R1
+    uw_r2: Optional[float] = None  # If None, reuse uw from R1
+    
+    # ========================================
+    # === R4 RISK PARAMETERS (Economic Loss) ===
+    # ========================================
+    # R4 = Ra4* + Rb4 + Rc4 + Rm4 + Ru4* + Rv4 + Rw4 + Rz4
+    # Components marked with * only calculated for properties with animal loss
+    
+    # Flag to activate conditional components Ra4* and Ru4*
+    has_animal_loss: bool = False  # Activates Ra4* and Ru4* only
+    
+    # Economic values (currency units)
+    ca: float = 0      # Valor de los animales en la zona (por defecto 0)
+    cb: float = 350    # Valor del edificio relevante de la zona
+    cc: float = 50     # Valor del contenido en la zona
+    cs: float = 75     # Valor de los sistemas internos incluidas sus actividades de la zona
+    ct: float = 500    # Valor total de la estructura
+    
+    # R4-specific loss factors (if None, reuse from R1)
+    rt_r4: Optional[float] = None   # Tabla C.3, if None uses rt from R1
+    lt_r4: Optional[float] = None   # Tabla C.12, if None uses lt from R1
+    rp_r4: Optional[float] = None   # Tabla C.4, if None uses rp from R1
+    rf_r4: Optional[float] = None   # Tabla C.5, if None uses rf from R1
+    
+    # R4-specific table values for Lf4 and Lo4 (Tabla C.12)
+    lf4: float = 0.2     # Tabla C.12 - default: "Hotel/Escuela/Oficina"
+    lo4: float = 0.01    # Tabla C.12 - default: "Hospital/Industrial/Oficinas"
+
+
 
 
 class Calculators:
@@ -233,9 +287,10 @@ class EngineIEC62305:
             return 0.0
         return self.geom.Ng * Adj * line.Cdj * line.ct * 1e-6
     
+    
     def _calculate_Ni(self, line: LineParameters) -> float:
         """Calculate Ni = Ng × Ai × Ci × Ce × Ct × 10^-6"""
-        Ai = 4000.0 * line.length
+        Ai = 100.0 * line.length  # Ai = 100 × Ll (induced surges)
         return self.geom.Ng * Ai * line.ci * line.ce * line.ct * 1e-6
     
     def _calculate_Pu(self, z: ZoneParameters) -> float:
@@ -253,6 +308,49 @@ class EngineIEC62305:
     def _calculate_Pz(self, z: ZoneParameters) -> float:
         """Calculate Pz = Pspd × Pli × Cli"""
         return z.pspd_z * z.pli * z.cli
+    
+    # ========================================
+    # === R2 RISK CALCULATION METHODS ===
+    # ========================================
+    
+    def _calculate_Lb2(self, z: ZoneParameters) -> float:
+        """Calculate Lb2 = rp × rf × Lf2 × (nz/nt) - Equation C.7"""
+        nz_val = z.nz_r2 if z.nz_r2 is not None else z.nz
+        nt_val = z.nt_r2 if z.nt_r2 is not None else z.nt
+        return z.rp * z.rf * z.lf2 * (nz_val / nt_val)
+    
+    def _calculate_Lc2(self, z: ZoneParameters) -> float:
+        """Calculate Lc2 = Lo2 × (nz/nt) - Equation C.8"""
+        nz_val = z.nz_r2 if z.nz_r2 is not None else z.nz
+        nt_val = z.nt_r2 if z.nt_r2 is not None else z.nt
+        return z.lo2 * (nz_val / nt_val)
+    
+    # ========================================
+    # === R4 RISK CALCULATION METHODS ===
+    # ========================================
+    
+    def _calculate_La4(self, z: ZoneParameters) -> float:
+        """Calculate La4 = rt × Lt × (ca/ct) - Equation C.10"""
+        rt_val = z.rt_r4 if z.rt_r4 is not None else z.rt
+        lt_val = z.lt_r4 if z.lt_r4 is not None else z.lt
+        if z.ct == 0:
+            return 0.0
+        return rt_val * lt_val * (z.ca / z.ct)
+    
+    def _calculate_Lb4(self, z: ZoneParameters) -> float:
+        """Calculate Lb4 = rp × rf × Lf4 × (ca+cb+cc+cs)/ct - Equation C.12"""
+        rp_val = z.rp_r4 if z.rp_r4 is not None else z.rp
+        rf_val = z.rf_r4 if z.rf_r4 is not None else z.rf
+        if z.ct == 0:
+            return 0.0
+        return rp_val * rf_val * z.lf4 * ((z.ca + z.cb + z.cc + z.cs) / z.ct)
+    
+    def _calculate_Lc4(self, z: ZoneParameters) -> float:
+        """Calculate Lc4 = Lo4 × (cs/ct) - Equation C.13"""
+        if z.ct == 0:
+            return 0.0
+        return z.lo4 * (z.cs / z.ct)
+
     
     def compute_risk_R1(self) -> Dict:
         """
@@ -368,3 +466,232 @@ class EngineIEC62305:
             }
         
         return {"total": total, "zones": zones_output, "Ad": self.Ad, "Am": self.Am}
+    
+    def compute_risk_R2(self) -> Dict:
+        """
+        Compute R2 = Rb2 + Rc2 + Rm2 + Rv2 + Rw2 + Rz2
+        R2 is the risk of loss of service to the public
+        IMPORTANT: R2 always calculates ALL components (no conditional logic like R1)
+        Returns detailed breakdown for each zone and component
+        """
+        total = 0.0
+        zones_output = {}
+        
+        # Common factors (same for all zones, reused from R1)
+        Nd = self._calculate_Nd()
+        Nm = self._calculate_Nm()
+        
+        for z in self.zones:
+            # === 1. Rb2 = Nd × Pb × Lb2 ===
+            Pb = z.pb  # Reused from R1
+            Lb2 = self._calculate_Lb2(z)
+            Rb2 = Nd * Pb * Lb2
+            
+            # === 2. Rc2 = Nd × Pc × Lc2 ===
+            # R2 ALWAYS calculates Rc2 (no conditional)
+            Lc2 = self._calculate_Lc2(z)
+            Pc = z.pspd * z.cld  # Reused from R1
+            Rc2 = Nd * Pc * Lc2
+            
+            # === 3. Rm2 = Nm × Pm × Lm2 ===
+            # R2 ALWAYS calculates Rm2 (no conditional)
+            # Use R2-specific parameters if provided, otherwise use R1 values
+            wm1_val = z.wm1_r2 if z.wm1_r2 is not None else z.wm1
+            wm2_val = z.wm2_r2 if z.wm2_r2 is not None else z.wm2
+            ks3_val = z.ks3_r2 if z.ks3_r2 is not None else z.ks3
+            uw_val = z.uw_r2 if z.uw_r2 is not None else z.uw
+            
+            Pms = Calculators.calculate_Pms(wm1_val, wm2_val, ks3_val, uw_val)
+            Pm = z.pspd * Pms
+            Lm2 = Lc2  # Lm2 = Lc2
+            Rm2 = Nm * Pm * Lm2
+            
+            # === Line-based components ===
+            Rv2_sum = 0.0
+            Rw2_sum = 0.0
+            Rz2_sum = 0.0
+            
+            Nl_total = 0.0
+            Ndj_total = 0.0
+            Ni_total = 0.0
+            
+            for line in self.lines:
+                Nl = self._calculate_Nl(line)
+                Ndj = self._calculate_Ndj(line)
+                Ni = self._calculate_Ni(line)
+                
+                Nl_total += Nl
+                Ndj_total += Ndj
+                Ni_total += Ni
+                
+                # === 4. Rv2 = (Nl + Ndj) × Pv × Lv2 ===
+                Pv = self._calculate_Pv(z)  # Reused from R1
+                Lv2 = Lb2  # Lv2 = Lb2
+                Rv2_sum += (Nl + Ndj) * Pv * Lv2
+                
+                # === 5. Rw2 = (Nl + Ndj) × Pw × Lw2 ===
+                # R2 ALWAYS calculates Rw2 (no conditional)
+                Pw = self._calculate_Pw(z)  # Reused from R1
+                Lw2 = Lc2  # Lw2 = Lc2
+                Rw2_sum += (Nl + Ndj) * Pw * Lw2
+                
+                # === 6. Rz2 = Ni × Pz × Lz2 ===
+                # R2 ALWAYS calculates Rz2 (no conditional)
+                Pz = self._calculate_Pz(z)  # Reused from R1
+                Lz2 = Lc2  # Lz2 = Lc2
+                Rz2_sum += Ni * Pz * Lz2
+            
+            # Total R2 for this zone
+            zone_total = Rb2 + Rc2 + Rm2 + Rv2_sum + Rw2_sum + Rz2_sum
+            total += zone_total
+            
+            # Store detailed results
+            zones_output[z.name] = {
+                "Total": zone_total,
+                # Component values
+                "Rb2": Rb2, "Rc2": Rc2, "Rm2": Rm2,
+                "Rv2": Rv2_sum, "Rw2": Rw2_sum, "Rz2": Rz2_sum,
+                # Intermediate calculations
+                "Nd": Nd, "Nm": Nm,
+                "Pb": Pb, "Lb2": Lb2,
+                "Pc": Pc, "Lc2": Lc2,
+                "Pm": Pm, "Pms": Pms,
+                "Nl": Nl_total, "Ndj": Ndj_total, "Ni": Ni_total,
+                "Pv": self._calculate_Pv(z) if self.lines else 0.0,
+                "Lv2": Lb2,
+                "Pw": self._calculate_Pw(z) if self.lines else 0.0,
+                "Lw2": Lc2,
+                "Pz": self._calculate_Pz(z) if self.lines else 0.0,
+                "Lz2": Lc2,
+            }
+        
+        return {"total": total, "zones": zones_output, "Ad": self.Ad, "Am": self.Am}
+    
+    def compute_risk_R4(self) -> Dict:
+        """
+        Compute R4 = Ra4* + Rb4 + Rc4 + Rm4 + Ru4* + Rv4 + Rw4 + Rz4
+        R4 is the risk of economic loss (loss of animals)
+        Components marked with * only calculated for properties with animal loss
+        Returns detailed breakdown for each zone and component
+        """
+        total = 0.0
+        zones_output = {}
+        
+        # Common factors (same for all zones, reused from R1)
+        Nd = self._calculate_Nd()
+        Nm = self._calculate_Nm()
+        
+        for z in self.zones:
+            # Check if animal loss components are active
+            has_animals = z.has_animal_loss
+            
+            # === 1. Ra4* = Nd × Pa × La4 ===
+            # Only calculated if has_animal_loss = True
+            Ra4 = 0.0
+            La4 = 0.0
+            if has_animals:
+                Pa = self._calculate_Pa(z)  # Reused from R1
+                La4 = self._calculate_La4(z)
+                Ra4 = Nd * Pa * La4
+            
+            # === 2. Rb4 = Nd × Pb × Lb4 ===
+            Pb = z.pb  # Reused from R1
+            Lb4 = self._calculate_Lb4(z)
+            Rb4 = Nd * Pb * Lb4
+            
+            # === 3. Rc4 = Nd × Pc × Lc4 ===
+            # Always calculated (no conditional)
+            Lc4 = self._calculate_Lc4(z)
+            Pc = z.pspd * z.cld  # Reused from R1
+            Rc4 = Nd * Pc * Lc4
+            
+            # === 4. Rm4 = Nm × Pm × Lm4 ===
+            # Always calculated (no conditional)
+            # Reuse Pm logic from R1 (uses R1 or R2 parameters if available)
+            wm1_val = z.wm1_r2 if z.wm1_r2 is not None else z.wm1
+            wm2_val = z.wm2_r2 if z.wm2_r2 is not None else z.wm2
+            ks3_val = z.ks3_r2 if z.ks3_r2 is not None else z.ks3
+            uw_val = z.uw_r2 if z.uw_r2 is not None else z.uw
+            
+            Pms = Calculators.calculate_Pms(wm1_val, wm2_val, ks3_val, uw_val)
+            Pm = z.pspd * Pms
+            Lm4 = Lc4  # Lm4 = Lc4
+            Rm4 = Nm * Pm * Lm4
+            
+            # === Line-based components ===
+            Ru4_sum = 0.0
+            Rv4_sum = 0.0
+            Rw4_sum = 0.0
+            Rz4_sum = 0.0
+            
+            Nl_total = 0.0
+            Ndj_total = 0.0
+            Ni_total = 0.0
+            
+            for line in self.lines:
+                Nl = self._calculate_Nl(line)
+                Ndj = self._calculate_Ndj(line)
+                Ni = self._calculate_Ni(line)
+                
+                Nl_total += Nl
+                Ndj_total += Ndj
+                Ni_total += Ni
+                
+                # === 5. Ru4* = (Nl + Ndj) × Pu × Lu4 ===
+                # Only calculated if has_animal_loss = True
+                if has_animals:
+                    Pu = self._calculate_Pu(z)  # Reused from R1
+                    Lu4 = La4  # Lu4 = La4
+                    Ru4_sum += (Nl + Ndj) * Pu * Lu4
+                
+                # === 6. Rv4 = (Nl + Ndj) × Pv × Lv4 ===
+                Pv = self._calculate_Pv(z)  # Reused from R1
+                Lv4 = Lb4  # Lv4 = Lb4
+                Rv4_sum += (Nl + Ndj) * Pv * Lv4
+                
+                # === 7. Rw4 = (Nl + Ndj) × Pw × Lw4 ===
+                # Always calculated (no conditional)
+                Pw = self._calculate_Pw(z)  # Reused from R1
+                Lw4 = Lc4  # Lw4 = Lc4
+                Rw4_sum += (Nl + Ndj) * Pw * Lw4
+                
+                # === 8. Rz4 = Ni × Pz × Lz4 ===
+                # Always calculated (no conditional)
+                Pz = self._calculate_Pz(z)  # Reused from R1
+                Lz4 = Lc4  # Lz4 = Lc4
+                Rz4_sum += Ni * Pz * Lz4
+            
+            # Total R4 for this zone
+            zone_total = Ra4 + Rb4 + Rc4 + Rm4 + Ru4_sum + Rv4_sum + Rw4_sum + Rz4_sum
+            total += zone_total
+            
+            # Store detailed results
+            zones_output[z.name] = {
+                "Total": zone_total,
+                "has_animals": has_animals,
+                # Component values
+                "Ra4": Ra4, "Rb4": Rb4, "Rc4": Rc4, "Rm4": Rm4,
+                "Ru4": Ru4_sum, "Rv4": Rv4_sum, "Rw4": Rw4_sum, "Rz4": Rz4_sum,
+                # Intermediate calculations
+                "Nd": Nd, "Nm": Nm,
+                "Pa": self._calculate_Pa(z) if has_animals else 0.0,
+                "La4": La4,
+                "Pb": Pb, "Lb4": Lb4,
+                "Pc": Pc, "Lc4": Lc4,
+                "Pm": Pm, "Pms": Pms,
+                "Nl": Nl_total, "Ndj": Ndj_total, "Ni": Ni_total,
+                "Pu": self._calculate_Pu(z) if has_animals and self.lines else 0.0,
+                "Lu4": La4 if has_animals else 0.0,
+                "Pv": self._calculate_Pv(z) if self.lines else 0.0,
+                "Lv4": Lb4,
+                "Pw": self._calculate_Pw(z) if self.lines else 0.0,
+                "Lw4": Lc4,
+                "Pz": self._calculate_Pz(z) if self.lines else 0.0,
+                "Lz4": Lc4,
+                # Economic values
+                "ca": z.ca, "cb": z.cb, "cc": z.cc, "cs": z.cs, "ct": z.ct,
+                "lf4": z.lf4, "lo4": z.lo4,
+            }
+        
+        return {"total": total, "zones": zones_output, "Ad": self.Ad, "Am": self.Am}
+
